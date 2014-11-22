@@ -276,8 +276,12 @@ pull = subparsers.add_parser('pull', help='git-pull in all existing repositories
         formatter_class=argparse.RawDescriptionHelpFormatter)
 pull.add_argument('--all', help='update local branches in all repositories', dest='updateall', action='store_true', default=True)
 pull.add_argument('--noall', help='update local branches only when something has been fetched', dest='updateall', action='store_false', default=True)
+newpkgsopt = pull.add_mutually_exclusive_group()
+newpkgsopt.add_argument('-n', '--newpkgs', help='download packages that do not exist on local side',
+        action='store_true')
+newpkgsopt.add_argument('-nn', '--nonewpkgs', help='do not download new packages', dest='newpkgs', action='store_false')
 pull.set_defaults(func=pull_packages, branch='[*]', prune=False, newpkgs=False, omitexisting=False)
-default_options['pull'] = {'branch': ['*'], 'prune': False, 'newpkgs': False, 'omitexisting': False}
+default_options['pull'] = {'branch': ['*'], 'prune': False, 'omitexisting': False}
 
 checkout =subparsers.add_parser('checkout', help='checkout repositories', parents=[common_fetchoptions],
         formatter_class=argparse.RawDescriptionHelpFormatter)
