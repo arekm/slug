@@ -274,7 +274,7 @@ default_options['fetch'] = {'branch': '[*]', 'prune': False, 'newpkgs': False, '
 
 pull = subparsers.add_parser('pull', help='git-pull in all existing repositories', parents=[common_fetchoptions],
         formatter_class=argparse.RawDescriptionHelpFormatter)
-pull.add_argument('--all', help='update local branches in all repositories', dest='updateall', action='store_true', default=True)
+pull.add_argument('--all', help='update local branches in all repositories', dest='updateall', action='store_true', default=False)
 pull.add_argument('--noall', help='update local branches only when something has been fetched', dest='updateall', action='store_false', default=True)
 newpkgsopt = pull.add_mutually_exclusive_group()
 newpkgsopt.add_argument('-n', '--newpkgs', help='download packages that do not exist on local side',
