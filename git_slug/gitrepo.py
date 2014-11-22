@@ -82,12 +82,21 @@ class GitRepo:
             'refs/notes/*:refs/notes/*'])
 
     def check_remote(self, ref, remote=REMOTE_NAME):
+        localref = EMPTYSHA1
         ref = ref.replace(REFFILE, os.path.join('remotes', remote))
         try:
             with open(os.path.join(self.gdir, ref), 'r') as f:
                 localref = f.readline().strip()
         except IOError:
-            localref = EMPTYSHA1
+            try:
+                with open(os.path.join(self.gdir, 'packed-refs')) as f:
+                    for line in f:
+                        line_data = line.split()
+                        if len(line_data) == 2 and line_data[1] == ref:
+                            localref = line_data[0].strip()
+                            break
+            except IOError:
+                pass
         return localref
 
     def showfile(self, filename, ref="/".join([REMOTE_NAME, "master"])):
