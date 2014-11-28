@@ -108,15 +108,25 @@ def fetch_package(gitrepo, ref2fetch, options):
 def fetch_packages(options, return_all=False):
     refs = getrefs(options.branch, options.repopattern)
     print('Read remotes data')
+    pkgs_new = []
+    if options.newpkgs:
+        for pkgdir in sorted(refs.heads):
+            gitdir = os.path.join(options.packagesdir, pkgdir, '.git')
+            if not os.path.isdir(gitdir):
+                pkgs_new.append(pkgdir)
+
+        pool = WorkerPool(options.jobs, pool_worker_init)
+        try:
+            pool.starmap(initpackage, zip(pkgs_new, [options] * len(pkgs_new)))
+        except KeyboardInterrupt:
+            pool.terminate()
+        else:
+            pool.close()
+        pool.join()
+
     args = []
     for pkgdir in sorted(refs.heads):
-        gitdir = os.path.join(options.packagesdir, pkgdir, '.git')
-        if not os.path.isdir(gitdir):
-            if options.newpkgs:
-                gitrepo = initpackage(pkgdir, options)
-            else:
-                continue
-        elif options.omitexisting:
+        if options.omitexisting and pkgdir not in pkgs_new:
             continue
         else:
             gitrepo = GitRepo(os.path.join(options.packagesdir, pkgdir))
