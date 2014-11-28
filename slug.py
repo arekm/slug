@@ -96,7 +96,16 @@ def getrefs(*args):
         sys.exit(2)
     return refs
 
-def fetch_package(gitrepo, ref2fetch, options):
+def fetch_package(gitrepo, refs_heads, options):
+    ref2fetch = []
+    for ref in refs_heads:
+        if gitrepo.check_remote(ref) != refs_heads[ref]:
+            ref2fetch.append('+{}:{}/{}'.format(ref, REMOTEREFS, ref[len('refs/heads/'):]))
+    if ref2fetch:
+        ref2fetch.append('refs/notes/*:refs/notes/*')
+    else:
+        return
+
     try:
         (stdout, stderr) = gitrepo.fetch(ref2fetch, options.depth)
         if stderr != b'':
@@ -130,13 +139,7 @@ def fetch_packages(options, return_all=False):
             continue
         else:
             gitrepo = GitRepo(os.path.join(options.packagesdir, pkgdir))
-        ref2fetch = []
-        for ref in refs.heads[pkgdir]:
-            if gitrepo.check_remote(ref) != refs.heads[pkgdir][ref]:
-                ref2fetch.append('+{}:{}/{}'.format(ref, REMOTEREFS, ref[len('refs/heads/'):]))
-        if ref2fetch:
-            ref2fetch.append('refs/notes/*:refs/notes/*')
-            args.append((gitrepo, ref2fetch, options))
+            args.append((gitrepo, refs.heads[pkgdir], options))
 
     updated_repos = []
     pool = WorkerPool(options.jobs, pool_worker_init)

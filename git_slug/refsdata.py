@@ -16,7 +16,7 @@ class NoMatchedRepos(Exception):
 
 class RemoteRefsData:
     def __init__(self, stream, pattern, dirpattern=('*',)):
-        self.heads = collections.defaultdict(lambda: collections.defaultdict(lambda: EMPTYSHA1))
+        self.heads = collections.defaultdict(self.__dict_var__)
         pats = re.compile('|'.join(fnmatch.translate(os.path.join('refs/heads', p)) for p in pattern))
         dirpat = re.compile('|'.join(fnmatch.translate(p) for p in dirpattern))
         for line in stream.readlines():
@@ -27,6 +27,12 @@ class RemoteRefsData:
                 self.heads[repo][ref] = sha1
         if not self.heads:
             raise NoMatchedRepos
+
+    def __dict_init__(self):
+        return EMPTYSHA1
+
+    def __dict_var__(self):
+        return collections.defaultdict(self.__dict_init__)
 
     def put(self, repo, data):
         for line in data:
