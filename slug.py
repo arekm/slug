@@ -45,6 +45,21 @@ def cpu_count():
 def pool_worker_init():
     signal.signal(signal.SIGINT, signal.SIG_IGN)
 
+def run_worker(function, options, args):
+    ret = []
+    pool = WorkerPool(options.jobs, pool_worker_init)
+    try:
+        ret = pool.starmap(function, args)
+        pool.close()
+        pool.join()
+        ret = list(filter(None, ret))
+    except KeyboardInterrupt:
+        print('Keyboard interrupt received, finishing...', file=sys.stderr)
+        pool.terminate()
+        pool.join()
+        sys.exit(1)
+    return ret
+
 def readconfig(path):
     config = UnquoteConfig(delimiters='=', interpolation=None, strict=False)
     config.read(path)
@@ -124,14 +139,7 @@ def fetch_packages(options, return_all=False):
             if not os.path.isdir(gitdir):
                 pkgs_new.append(pkgdir)
 
-        pool = WorkerPool(options.jobs, pool_worker_init)
-        try:
-            pool.starmap(initpackage, zip(pkgs_new, [options] * len(pkgs_new)))
-        except KeyboardInterrupt:
-            pool.terminate()
-        else:
-            pool.close()
-        pool.join()
+        run_worker(initpackage, options, zip(pkgs_new, [options] * len(pkgs_new)))
 
     args = []
     for pkgdir in sorted(refs.heads):
@@ -141,17 +149,7 @@ def fetch_packages(options, return_all=False):
             gitrepo = GitRepo(os.path.join(options.packagesdir, pkgdir))
             args.append((gitrepo, refs.heads[pkgdir], options))
 
-    updated_repos = []
-    pool = WorkerPool(options.jobs, pool_worker_init)
-    try:
-        updated_repos = pool.starmap(fetch_package, args)
-    except KeyboardInterrupt:
-        pool.terminate()
-    else:
-        pool.close()
-    pool.join()
-
-    updated_repos = list(filter(None, updated_repos))
+    updated_repos = run_worker(fetch_package, options, args)
 
     if options.prune:
         refs = getrefs('*')
@@ -180,14 +178,8 @@ def checkout_packages(options):
     repos = []
     for pkgdir in sorted(refs.heads):
         repos.append(GitRepo(os.path.join(options.packagesdir, pkgdir)))
-    pool = WorkerPool(options.jobs)
-    try:
-        pool.starmap(checkout_package, zip(repos, [options] * len(repos)))
-    except KeyboardInterrupt:
-        pool.terminate()
-    else:
-        pool.close()
-    pool.join()
+
+    run_worker(checkout_package, options, zip(repos, [options] * len(repos)))
 
 def clone_package(repo, options):
     try:
@@ -197,14 +189,7 @@ def clone_package(repo, options):
 
 def clone_packages(options):
     repos = fetch_packages(options)
-    pool = WorkerPool(options.jobs)
-    try:
-        pool.starmap(clone_package, zip(repos, [options] * len(repos)))
-    except KeyboardInterrupt:
-        pool.terminate()
-    else:
-        pool.close()
-    pool.join()
+    run_worker(clone_package, options, zip(repos, [options] * len(repos)))
 
 def pull_package(gitrepo, options):
     directory = os.path.basename(gitrepo.wtree)
@@ -230,13 +215,7 @@ def pull_packages(options):
         repolist = fetch_packages(options, False)
     print('--------Pulling------------')
     pool = WorkerPool(options.jobs, pool_worker_init)
-    try:
-        pool.starmap(pull_package, zip(repolist, [options] * len(repolist)))
-    except KeyboardInterrupt:
-        pool.terminate()
-    else:
-        pool.close()
-    pool.join()
+    run_worker(pull_package, options, zip(repolist, [options] * len(repolist)))
 
 def list_packages(options):
     refs = getrefs(options.branch, options.repopattern)
