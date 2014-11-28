@@ -138,6 +138,7 @@ def fetch_packages(options, return_all=False):
             ref2fetch.append('refs/notes/*:refs/notes/*')
             args.append((gitrepo, ref2fetch, options))
 
+    updated_repos = []
     pool = WorkerPool(options.jobs, pool_worker_init)
     try:
         updated_repos = pool.starmap(fetch_package, args)
